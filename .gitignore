@@ -1,5 +1,8 @@
 # Build output
-uwindow_test
-xdg-shell-client-protocol.h
-xdg-shell-protocol.c
+libuwindow.a
+include/xdg-shell-client-protocol.h
+src/xdg-shell-protocol.c
+src/*.o
+
+examples/simple/simple
 

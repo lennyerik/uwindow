@@ -1,9 +1,8 @@
-#include "window.h"
+#include "../include/window.h"
 
+#include "../include/error.h"
 #include <string.h>
 #include <poll.h>
-#include "xdg-shell-client-protocol.h"
-#include "error.h"
 
 
 static struct wl_display *display = NULL;

@@ -1,4 +1,4 @@
-#include "error.h"
+#include "../include/error.h"
 
 const char *MW_get_error_string(int error_code) {
     switch (error_code) {

@@ -1,6 +1,7 @@
 #ifndef MICROWINDOW_WINDOW_H
 #define MICROWINDOW_WINDOW_H
 
+#include "xdg-shell-client-protocol.h"
 #include <stdint.h>
 #include <stdbool.h>
 #include <wayland-client.h>

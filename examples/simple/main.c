@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <GL/gl.h>
-#include "window.h"
-#include "error.h"
+#include "../../include/window.h"
+#include "../../include/error.h"
 
 #include <unistd.h>
 

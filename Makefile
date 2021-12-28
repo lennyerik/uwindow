@@ -1,21 +1,37 @@
-CC=clang
 CFLAGS=-Wall -Wextra -Werror --std=c17 -pedantic
-LIBS=-lwayland-client -lwayland-egl -lEGL -lGL
+LDFLAGS=-lwayland-client -lwayland-egl -lEGL -lGL
 
-SRCS=main.c window.c error.c xdg-shell-protocol.c
+SRCS=src/window.c src/error.c
+OBJS=$(SRCS:.c=.o)
 
 XDG_SHELL_XML=/usr/share/wayland-protocols/stable/xdg-shell/xdg-shell.xml
+XDG_SHELL_CSRC=src/xdg-shell-protocol.c
+XDG_SHELL_OBJ=$(XDG_SHELL_CSRC:.c=.o)
+XDG_SHELL_HEADER=include/xdg-shell-client-protocol.h
 
-all: uwindow_test
 
-xdg-shell-protocol.c: $(XDG_SHELL_XML)
-	wayland-scanner private-code < $^ > xdg-shell-protocol.c
-	wayland-scanner client-header < $^ > xdg-shell-client-protocol.h
+all: $(XDG_SHELL_HEADER) libuwindow.a
 
-uwindow_test: $(SRCS)
-	$(CC) $(CFLAGS) $(LIBS) -o uwindow_test $^
+
+# Library
+libuwindow.a: $(XDG_SHELL_OBJ) $(OBJS)
+	$(AR) rcs $@ $^
+
+
+# Compiling a .o file from a .c file
+%.o: %.c
+	$(CC) $(CFLAGS) -o $@ -c $<
+
+
+# Generating the Wayland XDG definitions from the xml
+$(XDG_SHELL_CSRC): $(XDG_SHELL_XML)
+	wayland-scanner private-code < $< > $@
+
+$(XDG_SHELL_HEADER): $(XDG_SHELL_XML)
+	wayland-scanner client-header < $< > $@
+
 
 .PHONY: clean
 clean:
-	$(RM) xdg-shell-protocol.c xdg-shell-client-protocol.h uwindow_test
+	$(RM) $(XDG_SHELL_CSRC) $(XDG_SHELL_HEADER) $(XDG_SHELL_OBJ) $(OBJS) libuwindow.a
 
