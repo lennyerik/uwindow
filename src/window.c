@@ -2,7 +2,6 @@
 
 #include "../include/error.h"
 #include <string.h>
-#include <poll.h>
 
 
 static struct wl_display *display = NULL;
@@ -11,12 +10,6 @@ static EGLConfig egl_config = NULL;
 static struct wl_registry *registry = NULL;
 static struct wl_compositor *compositor = NULL;
 static struct xdg_wm_base *wm_base = NULL;
-
-static struct pollfd events_polldata = {
-    0,
-    POLLIN,
-    0
-};
 
 
 // Event listeners
@@ -54,7 +47,7 @@ static const struct wl_registry_listener reg_listener = {
 
 static void xdg_toplevel_configure(void *data, __attribute__((unused))struct xdg_toplevel *xdg_toplevel,
         int32_t width, int32_t height, __attribute__((unused))struct wl_array *states) {
-    struct MW_Window *window = (struct MW_Window *) data;
+    MW_Window *window = (MW_Window *) data;
 
     if (width == 0) {
         width = window->preferred_width;
@@ -76,7 +69,7 @@ static const struct xdg_toplevel_listener toplevel_listener = {
 
 
 static void xdg_surface_configure(void *data, struct xdg_surface *xdg_surface, uint32_t serial) {
-    struct MW_Window *window = (struct MW_Window *) data;
+    MW_Window *window = (MW_Window *) data;
 
     if (window->resize_needed) {
         wl_egl_window_resize(window->egl_window, window->current_width, window->current_height, 0, 0);
@@ -94,6 +87,28 @@ static const struct xdg_surface_listener xdg_surface_listener = {
 };
 
 
+int MW_process_events() {
+    if (wl_display_roundtrip(display) == -1) {
+        return MW_FAILED_DISPLAY_ROUNDTRIP;
+    }
+    if (wl_display_dispatch_pending(display) == -1) {
+        return MW_FAILED_DISPLAY_DISPATCH;
+    }
+    if (wl_display_flush(display) == -1) {
+        return MW_FAILED_DISPLAY_FLUSH;
+    }
+    return MW_SUCCESS;
+}
+
+int MW_process_events_blocking() {
+    if (wl_display_dispatch(display) == -1) {
+        return MW_FAILED_DISPLAY_DISPATCH;
+    }
+    if (wl_display_roundtrip(display) == -1) {
+        return MW_FAILED_DISPLAY_ROUNDTRIP;
+    }
+    return MW_SUCCESS;
+}
 
 int MW_init() {
     display = wl_display_connect(NULL);
@@ -106,7 +121,6 @@ int MW_init() {
         wl_display_disconnect(display);
         return MW_NO_EGL_DISPLAY;
     }
-    events_polldata.fd = wl_display_get_fd(display);
 
     if (eglInitialize(egl_display, NULL, NULL) == EGL_FALSE) {
         wl_display_disconnect(display);
@@ -134,8 +148,7 @@ int MW_init() {
     }
 
     wl_registry_add_listener(registry, &reg_listener, NULL);
-    wl_display_dispatch(display);
-    wl_display_roundtrip(display);
+    MW_process_events_blocking();
 
     if (compositor == NULL) {
         eglTerminate(egl_display);
@@ -151,7 +164,7 @@ int MW_init() {
     return MW_SUCCESS;
 }
 
-int MW_Window_create(struct MW_Window *window, const char *title, int32_t preferred_width, int32_t preferred_height) {
+int MW_Window_create(MW_Window *window, const char *title, int32_t preferred_width, int32_t preferred_height) {
     if (eglBindAPI(EGL_OPENGL_API) == EGL_FALSE) {
         return MW_FAILED_OPENGL_API_BIND;
     }
@@ -175,7 +188,7 @@ int MW_Window_create(struct MW_Window *window, const char *title, int32_t prefer
     xdg_toplevel_set_title(window->xdg_toplevel, title);
 
     wl_surface_commit(window->wayland_surface);
-    wl_display_dispatch(display);
+    MW_process_events_blocking();
 
     window->egl_window = wl_egl_window_create(window->wayland_surface, preferred_width, preferred_height);
     window->egl_surface = eglCreateWindowSurface(egl_display, egl_config, window->egl_window, NULL);
@@ -188,17 +201,17 @@ int MW_Window_create(struct MW_Window *window, const char *title, int32_t prefer
     // themselves. This is very useful for applications that only have a few windows.
     MW_Window_make_current(window);
     MW_Window_swap_buffers(window);
-    wl_display_dispatch(display);
+    MW_process_events_blocking();
 
     return MW_SUCCESS;
 }
 
-int MW_Window_register_resize_callback(struct MW_Window *window, MW_Window_resize_cb callback) {
+int MW_Window_register_resize_callback(MW_Window *window, MW_Window_resize_cb callback) {
     window->resize_cb = callback;
     return MW_SUCCESS;
 }
 
-int MW_Window_make_current(struct MW_Window *window) {
+int MW_Window_make_current(MW_Window *window) {
     if (eglMakeCurrent(egl_display, window->egl_surface, window->egl_surface, window->egl_context) == EGL_TRUE) {
         return MW_SUCCESS;
     } else {
@@ -206,7 +219,7 @@ int MW_Window_make_current(struct MW_Window *window) {
     }
 }
 
-int MW_Window_swap_buffers(struct MW_Window *window) {
+int MW_Window_swap_buffers(MW_Window *window) {
     if (eglSwapBuffers(egl_display, window->egl_surface) == EGL_TRUE) {
         return MW_SUCCESS;
     } else {
@@ -214,16 +227,7 @@ int MW_Window_swap_buffers(struct MW_Window *window) {
     }
 }
 
-int MW_Window_process_events(__attribute__((unused))struct MW_Window *window) {
-    poll(&events_polldata, 1, 0);
-    if ((events_polldata.revents & POLLIN) > 0) {
-        // TODO: Errorhandling
-        wl_display_dispatch(display);
-    }
-    return MW_SUCCESS;
-}
-
-void MW_Window_destroy(struct MW_Window *window) {
+void MW_Window_destroy(MW_Window *window) {
     eglDestroySurface(egl_display, window->egl_surface);
     wl_egl_window_destroy(window->egl_window);
     xdg_toplevel_destroy(window->xdg_toplevel);

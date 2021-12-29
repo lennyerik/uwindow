@@ -24,6 +24,12 @@ const char *MW_get_error_string(int error_code) {
             return "Failed to set the EGL Context as the active one";
         case MW_FAILED_TO_SWAP_EGL_BUFFERS:
             return "Failed to swap EGL buffers";
+        case MW_FAILED_DISPLAY_ROUNDTRIP:
+            return "Failed to wait for the wayland server to process pending requests";
+        case MW_FAILED_DISPLAY_DISPATCH:
+            return "Failed to dispatch events from wayland server event queue";
+        case MW_FAILED_DISPLAY_FLUSH:
+            return "Failed to flush display event queue";
         default:
             return "An unknown error occurred";
     }

@@ -7,7 +7,7 @@
 #include <unistd.h>
 
 
-struct MW_Window wind;
+MW_Window wind;
 
 
 bool check_error(int status) {
@@ -43,8 +43,7 @@ int main() {
     draw();
 
     for (int i = 0; i < 5; i++) {
-        MW_Window_process_events(&wind);
-        sleep(1);
+        MW_process_events_blocking();
     }
 
     MW_Window_destroy(&wind);
