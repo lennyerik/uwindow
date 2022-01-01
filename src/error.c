@@ -4,6 +4,12 @@ const char *MW_get_error_string(int error_code) {
     switch (error_code) {
         case MW_SUCCESS:
             return "The operation completed successfully";
+        case MW_INVALID_PARAM:
+            return "An invalid parameter was passed to the function";
+        case MW_INVALID_WINDOW_STATE:
+            return "The window object is in an invalid state";
+        case MW_NOT_INITIALISED:
+            return "uWindow has not been initialised, please call MW_init() first";
         case MW_NO_DISPLAY:
             return "Failed to connect to wayland display";
         case MW_NO_EGL_DISPLAY:

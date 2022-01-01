@@ -3,13 +3,26 @@
 #include "../include/error.h"
 #include <string.h>
 
+#define DEFAULT_PREFERRED_WIDTH 800
+#define DEFAULT_PREFERRED_HEIGHT 600
 
+static bool initialised = false;
 static struct wl_display *display = NULL;
 static EGLDisplay *egl_display = NULL;
 static EGLConfig egl_config = NULL;
 static struct wl_registry *registry = NULL;
 static struct wl_compositor *compositor = NULL;
 static struct xdg_wm_base *wm_base = NULL;
+
+#define MW_CHECK_NONNULL(p) if (p == NULL) return MW_INVALID_PARAM;
+#define MW_CHECK_WINDOW_NONNULL(w) if ( \
+        w->wayland_surface == NULL || \
+        w->xdg_surface == NULL || \
+        w->xdg_toplevel == NULL || \
+        w->egl_window == NULL || \
+        w->egl_surface == NULL || \
+        w->egl_context == NULL) return MW_INVALID_WINDOW_STATE;
+#define MW_CHECK_INITIALISED() if (!initialised) return MW_NOT_INITIALISED;
 
 
 // Event listeners
@@ -111,19 +124,24 @@ int MW_process_events_blocking() {
 }
 
 int MW_init() {
+    initialised = true;
+
     display = wl_display_connect(NULL);
     if (display == NULL) {
+        initialised = false;
         return MW_NO_DISPLAY;
     }
 
     egl_display = eglGetDisplay(display);
     if (egl_display == EGL_NO_DISPLAY) {
-        wl_display_disconnect(display);
+        initialised = false;
+        MW_finish();
         return MW_NO_EGL_DISPLAY;
     }
 
     if (eglInitialize(egl_display, NULL, NULL) == EGL_FALSE) {
-        wl_display_disconnect(display);
+        initialised = false;
+        MW_finish();
         return MW_FAILED_EGL_DISPLAY_INIT;
     }
 
@@ -135,29 +153,34 @@ int MW_init() {
     };
     EGLint num_config;
     if (eglChooseConfig(egl_display, attr, &egl_config, 1, &num_config) == EGL_FALSE) {
-        eglTerminate(egl_display);
-        wl_display_disconnect(display);
+        initialised = false;
+        MW_finish();
         return MW_NO_EGL_CONFIG;
     }
 
     registry = wl_display_get_registry(display);
     if (registry == NULL) {
-        eglTerminate(egl_display);
-        wl_display_disconnect(display);
+        initialised = false;
+        MW_finish();
         return MW_NO_REGISTRY;
     }
 
     wl_registry_add_listener(registry, &reg_listener, NULL);
-    MW_process_events_blocking();
+    int status = MW_process_events_blocking();
+    if (status != MW_SUCCESS) {
+        initialised = false;
+        MW_finish();
+        return status;
+    }
 
     if (compositor == NULL) {
-        eglTerminate(egl_display);
-        wl_display_disconnect(display);
+        initialised = false;
+        MW_finish();
         return MW_NO_COMPOSITOR;
     }
     if (wm_base == NULL) {
-        eglTerminate(egl_display);
-        wl_display_disconnect(display);
+        initialised = false;
+        MW_finish();
         return MW_NO_WM_BASE;
     }
 
@@ -165,7 +188,20 @@ int MW_init() {
 }
 
 int MW_Window_create(MW_Window *window, const char *title, int32_t preferred_width, int32_t preferred_height) {
+    MW_CHECK_INITIALISED();
+    MW_CHECK_NONNULL(title);
+
+    if (preferred_width == 0) {
+        preferred_width = DEFAULT_PREFERRED_WIDTH;
+    }
+    if (preferred_height == 0) {
+        preferred_height = DEFAULT_PREFERRED_HEIGHT;
+    }
+
+    memset(window, 0, sizeof(MW_Window));
+
     if (eglBindAPI(EGL_OPENGL_API) == EGL_FALSE) {
+        MW_Window_destroy(window);
         return MW_FAILED_OPENGL_API_BIND;
     }
 
@@ -188,7 +224,11 @@ int MW_Window_create(MW_Window *window, const char *title, int32_t preferred_wid
     xdg_toplevel_set_title(window->xdg_toplevel, title);
 
     wl_surface_commit(window->wayland_surface);
-    MW_process_events_blocking();
+    int status = MW_process_events_blocking();
+    if (status != MW_SUCCESS) {
+        MW_Window_destroy(window);
+        return status;
+    }
 
     window->egl_window = wl_egl_window_create(window->wayland_surface, preferred_width, preferred_height);
     window->egl_surface = eglCreateWindowSurface(egl_display, egl_config, window->egl_window, NULL);
@@ -201,17 +241,26 @@ int MW_Window_create(MW_Window *window, const char *title, int32_t preferred_wid
     // themselves. This is very useful for applications that only have a few windows.
     MW_Window_make_current(window);
     MW_Window_swap_buffers(window);
-    MW_process_events_blocking();
+    status = MW_process_events_blocking();
+    if (status != MW_SUCCESS) {
+        MW_Window_destroy(window);
+        return status;
+    }
 
     return MW_SUCCESS;
 }
 
 int MW_Window_register_resize_callback(MW_Window *window, MW_Window_resize_cb callback) {
+    MW_CHECK_INITIALISED();
+    MW_CHECK_WINDOW_NONNULL(window);
+    MW_CHECK_NONNULL(callback);
     window->resize_cb = callback;
     return MW_SUCCESS;
 }
 
 int MW_Window_make_current(MW_Window *window) {
+    MW_CHECK_INITIALISED();
+    MW_CHECK_WINDOW_NONNULL(window);
     if (eglMakeCurrent(egl_display, window->egl_surface, window->egl_surface, window->egl_context) == EGL_TRUE) {
         return MW_SUCCESS;
     } else {
@@ -220,6 +269,8 @@ int MW_Window_make_current(MW_Window *window) {
 }
 
 int MW_Window_swap_buffers(MW_Window *window) {
+    MW_CHECK_INITIALISED();
+    MW_CHECK_WINDOW_NONNULL(window);
     if (eglSwapBuffers(egl_display, window->egl_surface) == EGL_TRUE) {
         return MW_SUCCESS;
     } else {
@@ -228,23 +279,55 @@ int MW_Window_swap_buffers(MW_Window *window) {
 }
 
 void MW_Window_destroy(MW_Window *window) {
-    eglDestroySurface(egl_display, window->egl_surface);
-    wl_egl_window_destroy(window->egl_window);
-    xdg_toplevel_destroy(window->xdg_toplevel);
-    xdg_surface_destroy(window->xdg_surface);
-    wl_surface_destroy(window->wayland_surface);
-    eglDestroyContext(egl_display, window->egl_context);
+    if (egl_display != NULL && window->egl_surface != NULL) {
+        eglDestroySurface(egl_display, window->egl_surface);
+        window->egl_surface = NULL;
+    }
+    if (window->egl_window != NULL) {
+        wl_egl_window_destroy(window->egl_window);
+        window->egl_window = NULL;
+    }
+    if (window->xdg_toplevel != NULL) {
+        xdg_toplevel_destroy(window->xdg_toplevel);
+        window->xdg_toplevel = NULL;
+    }
+    if (window->xdg_surface != NULL) {
+        xdg_surface_destroy(window->xdg_surface);
+        window->xdg_surface = NULL;
+    }
+    if (window->wayland_surface != NULL) {
+        wl_surface_destroy(window->wayland_surface);
+        window->wayland_surface = NULL;
+    }
+    if (egl_display != NULL && window->egl_context != NULL) {
+        eglDestroyContext(egl_display, window->egl_context);
+        window->egl_context = NULL;
+    }
 
-    /* TODO
-    window->wayland_surface = NULL;
-    window->egl_window = NULL;
-    window->egl_surface = NULL;
-    window->egl_context = NULL;
-    */
+    window->preferred_width = 0;
+    window->preferred_height = 0;
+    window->resize_needed = false;
+    window->current_width = 0;
+    window->current_height = 0;
+    window->resize_cb = NULL;
 }
 
 void MW_finish() {
-    eglTerminate(egl_display);
-    wl_display_disconnect(display);
+    // TODO: If initialised, deinit all allocated windows
+
+    if (egl_display != NULL) {
+        eglTerminate(egl_display);
+    }
+    if (display != NULL) {
+        wl_display_disconnect(display);
+    }
+
+    initialised = false;
+    display = NULL;
+    egl_display = NULL;
+    egl_config = NULL;
+    registry = NULL;
+    compositor = NULL;
+    wm_base = NULL;
 }
 
