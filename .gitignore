@@ -1,6 +1,6 @@
 # Build output
 libuwindow.a
-include/xdg-shell-client-protocol.h
+src/xdg-shell-client-protocol.h
 src/xdg-shell-protocol.c
 src/*.o
 

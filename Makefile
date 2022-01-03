@@ -7,7 +7,7 @@ OBJS=$(SRCS:.c=.o)
 XDG_SHELL_XML=/usr/share/wayland-protocols/stable/xdg-shell/xdg-shell.xml
 XDG_SHELL_CSRC=src/xdg-shell-protocol.c
 XDG_SHELL_OBJ=$(XDG_SHELL_CSRC:.c=.o)
-XDG_SHELL_HEADER=include/xdg-shell-client-protocol.h
+XDG_SHELL_HEADER=src/xdg-shell-client-protocol.h
 
 
 all: $(XDG_SHELL_HEADER) libuwindow.a

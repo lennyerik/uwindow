@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <GL/gl.h>
-#include "../../include/window.h"
+#include "../../include/uwindow.h"
 
 #include <unistd.h>
 
