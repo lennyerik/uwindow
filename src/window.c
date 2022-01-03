@@ -111,10 +111,9 @@ MW_Error MW_Window_create(MW_Window *window, const char *title, int32_t preferre
     return MW_SUCCESS;
 }
 
-MW_Error MW_Window_register_resize_callback(MW_Window *window, MW_Window_resize_cb callback) {
+MW_Error MW_Window_set_resize_callback(MW_Window *window, MW_Window_resize_cb callback) {
     MW_CHECK_INITIALISED();
     MW_CHECK_WINDOW_NONNULL(window);
-    MW_CHECK_NONNULL(callback);
     window->resize_cb = callback;
     return MW_SUCCESS;
 }
@@ -137,6 +136,17 @@ MW_Error MW_Window_swap_buffers(MW_Window *window) {
     } else {
         return MW_FAILED_TO_SWAP_EGL_BUFFERS;
     }
+}
+
+MW_Error MW_Window_set_fullscreen(MW_Window *window, bool fullscreen) {
+    MW_CHECK_INITIALISED();
+    MW_CHECK_WINDOW_NONNULL(window);
+    if (fullscreen) {
+        xdg_toplevel_set_fullscreen(window->xdg_toplevel, NULL);
+    } else {
+        xdg_toplevel_unset_fullscreen(window->xdg_toplevel);
+    }
+    return MW_SUCCESS;
 }
 
 void MW_Window_destroy(MW_Window *window) {

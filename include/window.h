@@ -82,7 +82,7 @@ typedef struct {
 
     /** @brief The user-provided window resize callback (or `NULL` if none was provided)
      *
-     * This member is initialised to `NULL` and set to a valid function once the user calls @ref MW_Window_register_resize_callback.
+     * This member is initialised to `NULL` and set to a valid function once the user calls @ref MW_Window_set_resize_callback.
      */
     MW_Window_resize_cb resize_cb;
 } MW_Window;
@@ -122,10 +122,10 @@ typedef struct {
  *
  * @warning The `preferred_width` and `preferred_height` are only hints given to the window manager and
  *          should not be considered the initial size of the window!
- *          Always check the window size using a call like `glGetIntegerv` with `GL_VIEWPORT` before drawing any size-dependant
+ *          Always check the window size using a call like `glGetIntegerv` with `GL_VIEWPORT` before drawing any size-dependent
  *          graphics.
  *
- * @see @ref MW_Window_destroy
+ * @see @ref MW_Window_create_fullscreen @ref MW_Window_destroy
  */
 MW_Error MW_Window_create(MW_Window *window, const char *title, int32_t preferred_width, int32_t preferred_height);
 
@@ -133,22 +133,23 @@ MW_Error MW_Window_create(MW_Window *window, const char *title, int32_t preferre
 /**
  * @brief Sets a callback for a resize event of a specific window
  *
- * This function registers a callback function for receiving window resize events.
+ * This function sets a callback function for receiving window resize events.
  * After calling this function, the function specified in the parameter `callback` is called every time the
  * window `window` is resized.
  *
- * @param window The window to register the event handler function for
+ * If a callback for the window had already been set, the function overrides the previous callback.
+ * To unregister the callback function, simply pass NULL as the `callback` to this function.
+ *
+ * @param window The window to set the event handler function for
  * @param callback A pointer to the function which should receive the window resize events
  *
  * @returns An @ref MW_Error code:
- * - **MW_SUCCESS**: The callback was successfully registered
+ * - **MW_SUCCESS**: The callback was successfully set
  * - **MW_NOT_INITIALISED**: The library has not been initialised yet
  *     - @ref MW_init() has not yet been called or the call to @ref MW_init() was unsuccessful
- * - **MW_INVALID_PARAM**: An invalid parameter was passed to the function
- *     - `callback` cannot be NULL
  * - **MW_INVALID_WINDOW_STATE**: The passed window object is in an invalid state
  */
-MW_Error MW_Window_register_resize_callback(MW_Window *window, MW_Window_resize_cb callback);
+MW_Error MW_Window_set_resize_callback(MW_Window *window, MW_Window_resize_cb callback);
 
 
 /**
@@ -160,7 +161,7 @@ MW_Error MW_Window_register_resize_callback(MW_Window *window, MW_Window_resize_
  * @param window The window to select
  *
  * @returns An @ref MW_Error code:
- * - **MW_SUCCESS**: The callback was successfully registered
+ * - **MW_SUCCESS**: The window has successfully been set as the current one
  * - **MW_NOT_INITIALISED**: The library has not been initialised yet
  *     - @ref MW_init() has not yet been called or the call to @ref MW_init() was unsuccessful
  * - **MW_INVALID_WINDOW_STATE**: The passed window object is in an invalid state
@@ -179,13 +180,36 @@ MW_Error MW_Window_make_current(MW_Window *window);
  * @param window The window to swap the buffers for
  *
  * @returns An @ref MW_Error code:
- * - **MW_SUCCESS**: The callback was successfully registered
+ * - **MW_SUCCESS**: The buffers have successfully been swapped
  * - **MW_NOT_INITIALISED**: The library has not been initialised yet
  *     - @ref MW_init() has not yet been called or the call to @ref MW_init() was unsuccessful
  * - **MW_INVALID_WINDOW_STATE**: The passed window object is in an invalid state
  * - **MW_FAILED_TO_SWAP_EGL_BUFFERS**: The buffer swap failed
  */
 MW_Error MW_Window_swap_buffers(MW_Window *window);
+
+
+/**
+ * @brief Sets an @ref MW_Window to fullscreen or windowed mode
+ *
+ * This function takes a boolean and sets the window to fullscreen if true is passed and to windowed mode
+ * if false is passed.
+ *
+ * @param window The window to set to fullscreen / windowed mode
+ * @param fullscreen Whether to set the window to fullscreen instead of windowed mode
+ *
+ * @returns An @ref MW_Error code
+ * - **MW_SUCCESS**: The function call has succeeded. The window may or may not change to
+ *                   fullscreen / windowed mode
+ * - **MW_NOT_INITIALISED**: The library has not been initialised yet
+ *     - @ref MW_init() has not yet been called or the call to @ref MW_init() was unsuccessful
+ * - **MW_INVALID_WINDOW_STATE**: The passed window object is in an invalid state
+ *
+ * @warning The window manager does not always have to honour this request.\n
+ *          If you need to know whether the request succeeded, consider registering a window
+ *          resize callback using @ref MW_Window_set_resize_callback beforehand.
+ */
+MW_Error MW_Window_set_fullscreen(MW_Window *window, bool fullscreen);
 
 
 /**

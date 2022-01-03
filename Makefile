@@ -30,10 +30,13 @@ $(XDG_SHELL_CSRC): $(XDG_SHELL_XML)
 $(XDG_SHELL_HEADER): $(XDG_SHELL_XML)
 	wayland-scanner client-header < $< > $@
 
+
 docs: docs/html
 
+.PHONY: docs/html
 docs/html:
 	cd docs && doxygen
+
 
 .PHONY: clean
 clean:

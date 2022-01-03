@@ -37,7 +37,7 @@ int main() {
         return 1;
     }
 
-    MW_Window_register_resize_callback(&wind, window_resize_cb);
+    MW_Window_set_resize_callback(&wind, window_resize_cb);
 
     draw();
 
