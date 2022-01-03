@@ -1,26 +1,47 @@
+/** @file */
+
 #ifndef MICROWINDOW_ERROR_H
 #define MICROWINDOW_ERROR_H
 
-// Error codes
-#define MW_SUCCESS 0
-#define MW_INVALID_PARAM 1
-#define MW_INVALID_WINDOW_STATE 2
-#define MW_NOT_INITIALISED 3
-#define MW_NO_DISPLAY 4
-#define MW_NO_EGL_DISPLAY 5
-#define MW_FAILED_EGL_DISPLAY_INIT 6
-#define MW_NO_EGL_CONFIG 7
-#define MW_NO_REGISTRY 8
-#define MW_NO_COMPOSITOR 9
-#define MW_NO_WM_BASE 10
-#define MW_FAILED_OPENGL_API_BIND 11
-#define MW_FAILED_TO_MAKE_EGL_CONTEXT_CURRENT 12
-#define MW_FAILED_TO_SWAP_EGL_BUFFERS 13
-#define MW_FAILED_DISPLAY_ROUNDTRIP 14
-#define MW_FAILED_DISPLAY_DISPATCH 15
-#define MW_FAILED_DISPLAY_FLUSH 16
+
+/** @brief An generic error type enum for all library functions
+ *
+ * This enum specifies all return codes that library functions may return.
+ * It is used as a return value by almost all μWindow functions.
+ *
+ * To get a human-readable error message from an MW_Error code, call @ref MW_get_error_string
+ */
+typedef enum {
+    MW_SUCCESS = 0,
+    MW_INVALID_PARAM,
+    MW_INVALID_WINDOW_STATE,
+    MW_NOT_INITIALISED,
+    MW_ALREADY_INITIALISED,
+    MW_NO_DISPLAY,
+    MW_NO_EGL_DISPLAY,
+    MW_FAILED_EGL_DISPLAY_INIT,
+    MW_NO_EGL_CONFIG,
+    MW_NO_REGISTRY,
+    MW_NO_COMPOSITOR,
+    MW_NO_WM_BASE,
+    MW_FAILED_OPENGL_API_BIND,
+    MW_FAILED_TO_MAKE_EGL_CONTEXT_CURRENT,
+    MW_FAILED_TO_SWAP_EGL_BUFFERS,
+    MW_FAILED_DISPLAY_ROUNDTRIP,
+    MW_FAILED_DISPLAY_DISPATCH,
+    MW_FAILED_DISPLAY_FLUSH
+} MW_Error;
 
 
-const char *MW_get_error_string(int error_code);
+/**
+ * @brief Return a human-readable error message for an @ref MW_Error code
+ *
+ * This function cannot fail.
+ *
+ * @param error_code The error code to return the human-readable string for
+ *
+ * @returns A null-terminated string containing a human-readable error string
+ */
+const char *MW_get_error_string(MW_Error error_code);
 
 #endif

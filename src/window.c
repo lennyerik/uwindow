@@ -1,6 +1,5 @@
 #include "../include/window.h"
 
-#include "../include/error.h"
 #include <string.h>
 
 #define DEFAULT_PREFERRED_WIDTH 800
@@ -100,7 +99,9 @@ static const struct xdg_surface_listener xdg_surface_listener = {
 };
 
 
-int MW_process_events() {
+MW_Error MW_process_events() {
+    MW_CHECK_INITIALISED();
+
     if (wl_display_roundtrip(display) == -1) {
         return MW_FAILED_DISPLAY_ROUNDTRIP;
     }
@@ -113,7 +114,9 @@ int MW_process_events() {
     return MW_SUCCESS;
 }
 
-int MW_process_events_blocking() {
+MW_Error MW_process_events_blocking() {
+    MW_CHECK_INITIALISED();
+
     if (wl_display_dispatch(display) == -1) {
         return MW_FAILED_DISPLAY_DISPATCH;
     }
@@ -123,7 +126,11 @@ int MW_process_events_blocking() {
     return MW_SUCCESS;
 }
 
-int MW_init() {
+MW_Error MW_init() {
+    if (initialised == true) {
+        return MW_ALREADY_INITIALISED;
+    }
+
     initialised = true;
 
     display = wl_display_connect(NULL);
@@ -166,7 +173,7 @@ int MW_init() {
     }
 
     wl_registry_add_listener(registry, &reg_listener, NULL);
-    int status = MW_process_events_blocking();
+    MW_Error status = MW_process_events_blocking();
     if (status != MW_SUCCESS) {
         initialised = false;
         MW_finish();
@@ -187,7 +194,7 @@ int MW_init() {
     return MW_SUCCESS;
 }
 
-int MW_Window_create(MW_Window *window, const char *title, int32_t preferred_width, int32_t preferred_height) {
+MW_Error MW_Window_create(MW_Window *window, const char *title, int32_t preferred_width, int32_t preferred_height) {
     MW_CHECK_INITIALISED();
     MW_CHECK_NONNULL(title);
 
@@ -224,7 +231,7 @@ int MW_Window_create(MW_Window *window, const char *title, int32_t preferred_wid
     xdg_toplevel_set_title(window->xdg_toplevel, title);
 
     wl_surface_commit(window->wayland_surface);
-    int status = MW_process_events_blocking();
+    MW_Error status = MW_process_events_blocking();
     if (status != MW_SUCCESS) {
         MW_Window_destroy(window);
         return status;
@@ -250,7 +257,7 @@ int MW_Window_create(MW_Window *window, const char *title, int32_t preferred_wid
     return MW_SUCCESS;
 }
 
-int MW_Window_register_resize_callback(MW_Window *window, MW_Window_resize_cb callback) {
+MW_Error MW_Window_register_resize_callback(MW_Window *window, MW_Window_resize_cb callback) {
     MW_CHECK_INITIALISED();
     MW_CHECK_WINDOW_NONNULL(window);
     MW_CHECK_NONNULL(callback);
@@ -258,7 +265,7 @@ int MW_Window_register_resize_callback(MW_Window *window, MW_Window_resize_cb ca
     return MW_SUCCESS;
 }
 
-int MW_Window_make_current(MW_Window *window) {
+MW_Error MW_Window_make_current(MW_Window *window) {
     MW_CHECK_INITIALISED();
     MW_CHECK_WINDOW_NONNULL(window);
     if (eglMakeCurrent(egl_display, window->egl_surface, window->egl_surface, window->egl_context) == EGL_TRUE) {
@@ -268,7 +275,7 @@ int MW_Window_make_current(MW_Window *window) {
     }
 }
 
-int MW_Window_swap_buffers(MW_Window *window) {
+MW_Error MW_Window_swap_buffers(MW_Window *window) {
     MW_CHECK_INITIALISED();
     MW_CHECK_WINDOW_NONNULL(window);
     if (eglSwapBuffers(egl_display, window->egl_surface) == EGL_TRUE) {

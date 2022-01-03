@@ -4,5 +4,9 @@ include/xdg-shell-client-protocol.h
 src/xdg-shell-protocol.c
 src/*.o
 
+# Example build output
 examples/simple/simple
+
+# Docs build output
+docs/html/
 

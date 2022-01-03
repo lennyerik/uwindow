@@ -1,7 +1,7 @@
 CFLAGS=-Wall -Wextra -Werror --std=c17 -pedantic
 LDFLAGS=-lwayland-client -lwayland-egl -lEGL -lGL
 
-SRCS=src/window.c src/error.c
+SRCS=$(wildcard src/*.c)
 OBJS=$(SRCS:.c=.o)
 
 XDG_SHELL_XML=/usr/share/wayland-protocols/stable/xdg-shell/xdg-shell.xml
@@ -30,8 +30,13 @@ $(XDG_SHELL_CSRC): $(XDG_SHELL_XML)
 $(XDG_SHELL_HEADER): $(XDG_SHELL_XML)
 	wayland-scanner client-header < $< > $@
 
+docs: docs/html
+
+docs/html:
+	cd docs && doxygen
 
 .PHONY: clean
 clean:
 	$(RM) $(XDG_SHELL_CSRC) $(XDG_SHELL_HEADER) $(XDG_SHELL_OBJ) $(OBJS) libuwindow.a
+	$(RM) -r docs/html
 

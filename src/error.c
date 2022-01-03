@@ -1,6 +1,6 @@
 #include "../include/error.h"
 
-const char *MW_get_error_string(int error_code) {
+const char *MW_get_error_string(MW_Error error_code) {
     switch (error_code) {
         case MW_SUCCESS:
             return "The operation completed successfully";
@@ -10,6 +10,8 @@ const char *MW_get_error_string(int error_code) {
             return "The window object is in an invalid state";
         case MW_NOT_INITIALISED:
             return "uWindow has not been initialised, please call MW_init() first";
+        case MW_ALREADY_INITIALISED:
+            return "The uWindow library has already been initialised, please make sure you don't call MW_init() multiple times";
         case MW_NO_DISPLAY:
             return "Failed to connect to wayland display";
         case MW_NO_EGL_DISPLAY:
